@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import axios from "axios";
-import DataGrid from 'react-data-grid';
+// import DataGrid from 'react-data-grid';
+import MaterialTable from 'material-table';
 
 const monthMapNum = { 0: "01", 1: "02", 2: "03", 3: "04", 4: "05", 5: "06", 6: "07", 7: "08", 8: "09", 9: "10", 10: "11", 11: "12" };
 const monthMapString = { 0: "Jan", 1: "Feb", 2: "Mar", 3: "Apr", 4: "May", 5: "Jun", 6: "July", 7: "Aug", 8: "Sep", 9: "Oct", 10: "Nov", 11: "Dec" };
@@ -8,8 +9,8 @@ let orgList = [];
 let monthYearList = [[], []];
 
 const columns = [
-    { key: "nu", name: "No." },
-    { key: 'org', name: 'ORGANISATION' },
+    { field: "nu", title: "No." },
+    { field: 'org', title: 'ORGANISATION' },
 ];
 
 const rows = [
@@ -31,7 +32,7 @@ const convertToYearMonthDay = function (time) {
     remaining %= 60;
     console.log([month, days, hours, minutes, remaining])
 
-    return (month ? `${month} M` : "") + (days ? `${days} D` : "") + (hours ? `${hours} h` : "") + (minutes ? `${minutes} m` : "") + (remaining ? `${remaining} s` : "")
+    return (month ? `${month}M` : "") + (days ? `${days}D` : "") + (hours ? `${hours}h` : "") + (minutes ? `${minutes}m` : "") + (remaining ? `${remaining}s` : "")
 }
 
 // this function gives the list of orgs and all yearmonth string 
@@ -44,7 +45,7 @@ const extractDateRangeOrg = function (organisationRespMap) {
     for (const [org, obj] of Object.entries(organisationRespMap)) {
         // store org in the list of orgs
         orgList.push(org)
-        for (const [yearMonth, value] of Object.entries(obj)) {
+        for (const [yearMonth] of Object.entries(obj)) {
             if (yearMonth < mindate) {
                 mindate = yearMonth;
             }
@@ -60,11 +61,11 @@ const extractDateRangeOrg = function (organisationRespMap) {
     // generate the list of all the yearmonth string in the range
     // also generate the month year naming 
     while (stringYearMonth <= maxdate) {
-        columns.push({ key: stringYearMonth, name: `${tempYear}${monthMapString[tempMonth]}` });
+        columns.push({ field: stringYearMonth, title: `${tempYear}${monthMapString[tempMonth]}` });
         monthYearList[0].push(stringYearMonth);
         monthYearList[1].push(`${tempYear}${monthMapString[tempMonth]}`);
         tempMonth = (tempMonth + 1) % 12;
-        if (tempMonth == 0) {
+        if (tempMonth === 0) {
             tempYear += 1;
         }
         stringYearMonth = `${tempYear}${monthMapNum[tempMonth]}`;
@@ -77,19 +78,21 @@ const extractDateRangeOrg = function (organisationRespMap) {
 
 // this handles the pagination request
 const populateRowColumn = function (responseTimes, from, to) {
-    for (let i = from; i < to; i++) {
+    for (let i = from; i < Math.min(to, orgList.length); i++) {
         let tempRow = {};
         tempRow["nu"] = i + 1;
         tempRow['org'] = orgList[i];
         console.log("Organisation is: ", orgList[i]);
+        previous = 0;
         for (let j = 0; j < monthYearList[0].length; j++) {
             // console.log(`${monthYearList[0][j]}`);
             if (responseTimes[orgList[i]].hasOwnProperty(monthYearList[0][j])) {
                 // console.log(`${monthYearList[0][j]}: ${responseTimes[orgList[i]][monthYearList[0][j]]} #END`);
                 tempRow[monthYearList[0][j]] = convertToYearMonthDay(responseTimes[orgList[i]][monthYearList[0][j]]);
+                previous = tempRow[monthYearList[0][j]];
             } else {
                 // console.log(`${monthYearList[0][j]}: NA`);
-                tempRow[monthYearList[0][j]] = "NA";
+                tempRow[monthYearList[0][j]] = previous;
             }
         }
         rows.push(tempRow);
@@ -113,7 +116,7 @@ class ResponseTimes extends Component {
             .then(response => {
                 let responseTimes = response.data.message;
                 extractDateRangeOrg(response.data.message);
-                populateRowColumn(responseTimes, 10, 20);
+                populateRowColumn(responseTimes, 0, 300);
                 // change of state
                 this.setState({
                     rows: rows,
@@ -125,7 +128,7 @@ class ResponseTimes extends Component {
     render() {
         const { columns, rows } = this.state;
         return (
-            <DataGrid columns={columns} rows={rows} />
+            <MaterialTable columns={columns} data={rows} />
         )
     }
 }

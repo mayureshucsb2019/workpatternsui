@@ -2,7 +2,9 @@ import './App.css';
 import ResponseTimes from './ResponseTimes';
 
 function App() {
-  return <ResponseTimes />
+  return <div className="App">
+    <ResponseTimes />
+  </div>
 }
 
 export default App;
