@@ -1,7 +1,7 @@
 import { Component } from 'react';
 import axios from "axios";
 import MaterialTable from 'material-table';
-import { Redirect, Route, Link } from "react-router-dom";
+import { Route, Link } from "react-router-dom";
 import Multiseries from './Multiseries';
 
 const monthMapNum = { 0: "01", 1: "02", 2: "03", 3: "04", 4: "05", 5: "06", 6: "07", 7: "08", 8: "09", 9: "10", 10: "11", 11: "12" };
@@ -93,6 +93,18 @@ const extractDateRangeOrg = function (organisationRespMap) {
 // this handles the pagination request
 const populateRowColumn = function (responseTimes, from, to) {
     // let previous = 0;
+
+    // initialize setup to find aggregate
+    let aggregate = {};
+    aggregate["nu"] = 0;
+    aggregate["org"] = "all";
+    let noOrgsEveryMonth = {};
+    for (let j = 0; j < monthYearList[0].length; j++) {
+        aggregate[monthYearList[0][j]] = 0;
+        noOrgsEveryMonth[monthYearList[0][j]] = 0;
+    }
+
+    // find the row for every organisation
     for (let i = from; i < Math.min(to, orgList.length); i++) {
         let tempRow = {};
         tempRow["nu"] = i + 1;
@@ -103,6 +115,9 @@ const populateRowColumn = function (responseTimes, from, to) {
             if (responseTimes[orgList[i]].hasOwnProperty(monthYearList[0][j])) {
                 // console.log(`${monthYearList[0][j]}: ${responseTimes[orgList[i]][monthYearList[0][j]]} #END`);
                 tempRow[monthYearList[0][j]] = convertToYearMonthDay(responseTimes[orgList[i]][monthYearList[0][j]]);
+                // find organisation every yearmonth and add their times to find aggregate average
+                noOrgsEveryMonth[monthYearList[0][j]] += 1;
+                aggregate[monthYearList[0][j]] += responseTimes[orgList[i]][monthYearList[0][j]];
                 // previous = tempRow[monthYearList[0][j]];
             } else {
                 // console.log(`${monthYearList[0][j]}: NA`);
@@ -112,6 +127,13 @@ const populateRowColumn = function (responseTimes, from, to) {
         }
         rows.push(tempRow);
     }
+
+    // find average of the aggregate
+    for (let j = 0; j < monthYearList[0].length; j++) {
+        aggregate[monthYearList[0][j]] = convertToYearMonthDay(Math.floor(aggregate[monthYearList[0][j]] / noOrgsEveryMonth[monthYearList[0][j]]));
+    }
+    // add the aggregate at the start of the list
+    rows.unshift(aggregate);
 }
 
 const convertDataToMulitseriesData = function (dataObject) {
@@ -127,9 +149,9 @@ const convertDataToMulitseriesData = function (dataObject) {
             dataPoints: [] // { y: 155, label: "Jan" }
         }
         for (const [yearmonth, value] of Object.entries(data)) {
-            if(!isNaN(yearmonth)){
-                seriesObject.dataPoints.push({ y: convertYearMonthDayToNumber(value)/(60*60*24), label: yearmonth.slice(0,4)+" "+monthMapString[Number(yearmonth.slice(4,6))] })
-            }            
+            if (!isNaN(yearmonth)) {
+                seriesObject.dataPoints.push({ y: convertYearMonthDayToNumber(value) / (60 * 60 * 24), label: yearmonth.slice(0, 4) + " " + monthMapString[Number(yearmonth.slice(4, 6))] })
+            }
         }
         finalData.push(seriesObject);
     }
@@ -146,7 +168,7 @@ class ResponseTimes extends Component {
             rows: [],
             columns: []
         }
-        console.log("New state:",this.state);
+        console.log("New state:", this.state);
     }
 
     componentDidMount() {
@@ -158,18 +180,18 @@ class ResponseTimes extends Component {
                 extractDateRangeOrg(response.data.message);
                 populateRowColumn(responseTimes, 0, 300);
                 // change of state
-                this.setState(()=>({
+                this.setState(() => ({
                     selection: selectedMultiSeries,
                     rows: rows,
                     columns: columns
                 }));
-                console.log("New state:",this.state);
+                console.log("New state:", this.state);
             })
     }
 
-    handleSetState = (data) =>{
+    handleSetState = (data) => {
         console.log("Handling set state");
-        this.setState(()=>({
+        this.setState(() => ({
             selection: data,
             rows: rows,
             columns: columns
