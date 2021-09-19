@@ -10,21 +10,20 @@ const CanvasJSChart = CanvasJSReact.CanvasJSChart;
 
 class Multiseries extends Component {
 
-
 	render() {
-		console.log("PROPS IS: ", this.props);
+		console.log("PROPS State IS: ", this.props.location.state);
 		const options = {
 			animationEnabled: true,
 			title: {
 				text: "Response time graph wrt organisations"
 			},
 			axisY: {
-				title: "Time in number of seconds"
+				title: "Time in number of days"
 			},
 			toolTip: {
 				shared: true
 			},
-			data: this.props.data || this.props.location || [{
+			data: this.props.data || this.props.location.state.data || [{
 				type: "spline",
 				name: "2016",
 				showInLegend: true,
@@ -66,7 +65,7 @@ class Multiseries extends Component {
 
 		return (
 			<div>
-				<Link to={{ pathname: '/' }} >Main Page</Link>
+				<Link to={{ pathname: '/' }} ><button>Main Page</button></Link>
 				<Route exact path="/" component={ResponseTimes} />
 				<CanvasJSChart options={options}
 				/* onRef={ref => this.chart = ref} */

@@ -8,7 +8,6 @@ const monthMapNum = { 0: "01", 1: "02", 2: "03", 3: "04", 4: "05", 5: "06", 6: "
 const monthMapString = { 0: "Jan", 1: "Feb", 2: "Mar", 3: "Apr", 4: "May", 5: "Jun", 6: "July", 7: "Aug", 8: "Sep", 9: "Oct", 10: "Nov", 11: "Dec" };
 let orgList = [];
 let monthYearList = [[], []];
-
 let selectedMultiSeries = []
 
 const columns = [
@@ -128,7 +127,9 @@ const convertDataToMulitseriesData = function (dataObject) {
             dataPoints: [] // { y: 155, label: "Jan" }
         }
         for (const [yearmonth, value] of Object.entries(data)) {
-            seriesObject.dataPoints.push({ y: convertYearMonthDayToNumber(value), label: yearmonth })
+            if(!isNaN(yearmonth)){
+                seriesObject.dataPoints.push({ y: convertYearMonthDayToNumber(value)/(60*60*24), label: yearmonth.slice(0,4)+" "+monthMapString[Number(yearmonth.slice(4,6))] })
+            }            
         }
         finalData.push(seriesObject);
     }
@@ -141,29 +142,38 @@ class ResponseTimes extends Component {
         super(props)
 
         this.state = {
+            selection: [],
             rows: [],
             columns: []
         }
+        console.log("New state:",this.state);
     }
-
-    // onSubmit = () => {
-    //     console.log("Multiseries button has been clicked!", selectedMultiSeries)
-    //     return <Redirect to={{ pathname: '/graph', state: { data: selectedMultiSeries } }} />
-    // }
 
     componentDidMount() {
         console.log("ResponseTimes componentDidMount()");
+        console.log(this.state);
         axios.get("http://localhost:4300/api/email_reply_time_table")
             .then(response => {
                 let responseTimes = response.data.message;
                 extractDateRangeOrg(response.data.message);
                 populateRowColumn(responseTimes, 0, 300);
                 // change of state
-                this.setState({
+                this.setState(()=>({
+                    selection: selectedMultiSeries,
                     rows: rows,
                     columns: columns
-                });
+                }));
+                console.log("New state:",this.state);
             })
+    }
+
+    handleSetState = (data) =>{
+        console.log("Handling set state");
+        this.setState(()=>({
+            selection: data,
+            rows: rows,
+            columns: columns
+        }));
     }
 
     render() {
@@ -171,12 +181,13 @@ class ResponseTimes extends Component {
         return (
             <div>
                 {/* <button onClick={this.onSubmit}>generate multiseries</button> */}
-                <Link to={{ pathname: '/graph', state: { data: selectedMultiSeries } }} >Generate Multiseries</Link>
+                <Link to={{ pathname: '/graph', state: { data: selectedMultiSeries, check: "Data is coming through" } }} ><button>Generate Multiseries</button></Link>
                 <Route exact path="/graph" component={Multiseries} />
                 <MaterialTable columns={columns} data={rows}
                     onSelectionChange={(selectedRows) => {
                         selectedMultiSeries = convertDataToMulitseriesData(selectedRows);
                         console.log("selectedMultiSeries: ", selectedMultiSeries);
+                        this.handleSetState(selectedMultiSeries);
                     }}
                     options={{
                         filtering: true, pageSizeOptions: [5, 10, 20, 50, 100], paginationPosition: "both",
