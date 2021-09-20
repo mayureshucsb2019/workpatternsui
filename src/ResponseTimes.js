@@ -3,21 +3,7 @@ import axios from "axios";
 import MaterialTable from 'material-table';
 import { Route, Link } from "react-router-dom";
 import Multiseries from './Multiseries';
-
-const monthMapNum = { 0: "01", 1: "02", 2: "03", 3: "04", 4: "05", 5: "06", 6: "07", 7: "08", 8: "09", 9: "10", 10: "11", 11: "12" };
-const monthMapString = { 0: "Jan", 1: "Feb", 2: "Mar", 3: "Apr", 4: "May", 5: "Jun", 6: "July", 7: "Aug", 8: "Sep", 9: "Oct", 10: "Nov", 11: "Dec" };
-let orgList = [];
-let monthYearList = [[], []];
-let selectedMultiSeries = []
-
-const columns = [
-    { field: "nu", title: "No.", filterPlaceholder: "Filter" },
-    { field: 'org', title: 'ORGANISATION', filterPlaceholder: "Filter" },
-];
-
-const rows = [
-    // { org: 123.com, yearmonth: 123 },
-];
+import { monthMapNum, monthMapString } from './utils/constants';
 
 // takes parameter in seconds
 const convertToYearMonthDay = function (time) {
@@ -49,11 +35,17 @@ const convertYearMonthDayToNumber = function (timeString) {
     return 0
 }
 
-// this function gives the list of orgs and all yearmonth string 
+// this function gives the list of orgs and all yearmonth string and colums
 const extractDateRangeOrg = function (organisationRespMap) {
     const date = new Date();
     let mindate = `${date.getFullYear()}${date.getMonth() + 1}`
     let maxdate = "197001";
+    const columns = [
+        { field: "nu", title: "No.", filterPlaceholder: "Filter" },
+        { field: 'org', title: 'ORGANISATION', filterPlaceholder: "Filter" },
+    ];
+    const orgList = [];
+    const monthYearList = [[], []];
     // go over the keys to find the range of year and months 
     // also store the names of all the orgs for ease of use
     for (const [org, obj] of Object.entries(organisationRespMap)) {
@@ -87,13 +79,13 @@ const extractDateRangeOrg = function (organisationRespMap) {
     // console.log("Organisations: ", orgList);
     // console.log("MonthYear List:", monthYearList);
     // console.log("Columns: ", columns);
-    return [orgList, monthYearList];
+    return [orgList, monthYearList, columns];
 }
 
 // this handles the pagination request
-const populateRowColumn = function (responseTimes, from, to) {
+const populateRow = function (responseTimes, from, to, orgList, monthYearList) {
     // let previous = 0;
-
+    const rows = [];
     // initialize setup to find aggregate
     let aggregate = {};
     aggregate["nu"] = 0;
@@ -134,6 +126,7 @@ const populateRowColumn = function (responseTimes, from, to) {
     }
     // add the aggregate at the start of the list
     rows.unshift(aggregate);
+    return rows;
 }
 
 const convertDataToMulitseriesData = function (dataObject) {
@@ -164,11 +157,11 @@ class ResponseTimes extends Component {
         super(props)
 
         this.state = {
-            selection: [],
+            multiseries: [],
             rows: [],
             columns: []
         }
-        console.log("New state:", this.state);
+        console.log("Initial State set:", this.state);
     }
 
     componentDidMount() {
@@ -176,40 +169,39 @@ class ResponseTimes extends Component {
         console.log(this.state);
         axios.get("http://localhost:4300/api/email_reply_time_table")
             .then(response => {
-                let responseTimes = response.data.message;
-                extractDateRangeOrg(response.data.message);
-                populateRowColumn(responseTimes, 0, 300);
+                const responseTimes = response.data.message;
+                const [orgList, monthYearList, columns] = extractDateRangeOrg(responseTimes);
+                const rows = populateRow(responseTimes, 0, 3000, orgList, monthYearList);
                 // change of state
                 this.setState(() => ({
-                    selection: selectedMultiSeries,
+                    multiseries: [],
                     rows: rows,
                     columns: columns
                 }));
-                console.log("New state:", this.state);
+                console.log("New state on component mount:", this.state);
             })
     }
 
+    // sends new selected multiseries rows
     handleSetState = (data) => {
         console.log("Handling set state");
-        this.setState(() => ({
-            selection: data,
-            rows: rows,
-            columns: columns
+        this.setState((prevState) => ({
+            multiseries: data,
+            rows: prevState.rows,
+            columns: prevState.columns
         }));
     }
 
     render() {
-        const { columns, rows } = this.state;
+        // const { columns, rows } = this.state;
         return (
             <div>
                 {/* <button onClick={this.onSubmit}>generate multiseries</button> */}
-                <Link to={{ pathname: '/graph', state: { data: selectedMultiSeries, check: "Data is coming through" } }} ><button>Generate Multiseries</button></Link>
+                <Link to={{ pathname: '/graph', state: { data: this.state.multiseries, check: "Data is coming through" } }} ><button>Generate Multiseries</button></Link>
                 <Route exact path="/graph" component={Multiseries} />
-                <MaterialTable columns={columns} data={rows}
+                <MaterialTable columns={this.state.columns} data={this.state.rows}
                     onSelectionChange={(selectedRows) => {
-                        selectedMultiSeries = convertDataToMulitseriesData(selectedRows);
-                        console.log("selectedMultiSeries: ", selectedMultiSeries);
-                        this.handleSetState(selectedMultiSeries);
+                        this.handleSetState(convertDataToMulitseriesData(selectedRows));
                     }}
                     options={{
                         filtering: true, pageSizeOptions: [5, 10, 20, 50, 100], paginationPosition: "both",

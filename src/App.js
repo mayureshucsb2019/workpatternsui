@@ -1,7 +1,7 @@
 import './App.css';
 import ResponseTimes from './ResponseTimes';
 import Multiseries from './Multiseries';
-import { Route, Link } from "react-router-dom";
+import { Route } from "react-router-dom";
 
 function App() {
 

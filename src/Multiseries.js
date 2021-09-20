@@ -1,12 +1,11 @@
 import React from 'react';
 import CanvasJSReact from './canvasjs.react';
 import ResponseTimes from './ResponseTimes';
-import { Redirect, Route, Link } from "react-router-dom";
+import { Route, Link } from "react-router-dom";
 
 const Component = React.Component;
-const CanvasJS = CanvasJSReact.CanvasJS;
+// const CanvasJS = CanvasJSReact.CanvasJS;
 const CanvasJSChart = CanvasJSReact.CanvasJSChart;
-
 
 class Multiseries extends Component {
 
